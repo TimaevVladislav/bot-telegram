@@ -1,50 +1,63 @@
-const TelegramBot = require('node-telegram-bot-api')
 const { config } = require("dotenv")
-const axios = require("axios")
+
 const { Configuration, OpenAIApi } = require("openai")
+const TelegramBot = require('node-telegram-bot-api')
 
 config()
 
 const token = process.env.BOT_TOKEN
-const bot = new TelegramBot(token, {polling: true})
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_TOKEN
-})
+const bot = new TelegramBot(token, { polling: true })
+const configuration = new Configuration({ apiKey: process.env.OPENAI_TOKEN })
 const openai = new OpenAIApi(configuration)
 
 bot.on('message', async (message) => {
-    const baseCompletion = await openai.createCompletion({
-        model: 'text-davinci-003',
-        prompt: `${message.text}.\n`,
-        temperature: 0.8,
-        max_tokens: 1000,
-    })
+   if(message.text !== "/start") {
+       const baseCompletion = await openai.createCompletion({
+           model: 'text-davinci-003',
+           prompt: `${message.text}.\n`,
+           temperature: 0.8,
+           max_tokens: 1000,
+       })
 
+       const chatId = message.chat.id
+
+       const basePromptOuput = baseCompletion.data.choices.pop()
+
+       if (!basePromptOuput.text) {
+           return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
+       }
+
+       return bot.sendMessage(chatId, basePromptOuput.text)
+   }
+})
+bot.onText(/\/start/, async (message) => {
     const chatId = message.chat.id
 
-    const basePromptOuput = baseCompletion.data.choices.pop()
-
-    if (!basePromptOuput?.text) {
-        return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
-    }
-
-    bot.sendMessage(chatId, basePromptOuput?.text)
-})
-bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id
     const options = {
         reply_markup: {
             inline_keyboard: [
                 [
-                    {text: 'Новости школы', callback_data: '1'},
+                    {text: 'Интересный факт', callback_data: '1'},
                     {text: 'Расписание уроков', callback_data: '2'}
                 ]
 
             ]
         }
     }
-    bot.sendMessage(chatId, `Добро пожаловать в школьный бот! Я здесь, чтобы помочь вам со всеми вашими школьными потребностями.`, options)
+    return bot.sendMessage(chatId, `Добро пожаловать в школьный бот! Я здесь, чтобы помочь вам со всеми вашими школьными потребностями.`, options)
 })
+
+bot.on('callback_query', (callbackQuery) => {
+    const action = callbackQuery.data
+    const message = callbackQuery.message
+    const chatId = message.chat.id
+
+    if (action) {
+        // Отловить нажатие на копку
+        return bot.sendMessage(chatId, "Пожалуйста, ожидайте, Я отправляю вам данные...")
+    }
+})
+
 
 
 const schedule = {
@@ -87,45 +100,41 @@ const handlerSendSchedule = () => {
         if (schedule[classLetter] && schedule[classLetter][classNumber]) {
             const subjects = schedule[classLetter][classNumber]
             const scheduleMessage = `Расписание ${classLetter}${classNumber} класса: \n\n` + subjects.join('\n')
-            bot.sendMessage(chatId, scheduleMessage)
+            return bot.sendMessage(chatId, scheduleMessage)
         } else {
-            bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
+            return bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
         }
     })
 }
 
-
-bot.on('callback_query', (callbackQuery) => {
+bot.on('callback_query', async (callbackQuery) => {
     const message = callbackQuery.message
     const chatId = message.chat.id
     const option = callbackQuery.data
 
-    const news = [
-        'Новость 1: Последнее обновление по глобальной пандемии.',
-        'Новость 2: Школа возобновляется завтра с новыми мерами безопасности.',
-        'Новость 3: Школьный совет анонсирует планы для виртуальной церемонии выпускников.',
-    ]
-    const handlerSendNews = () => {
-        try {
-            setTimeout(() => {
-                bot.sendMessage(chatId, 'Последние новости:\n\n' + news.join('\n\n'))
-            }, 2000)
-        } catch (e) {
-            bot.sendMessage(chatId, 'Invalid option selected')
-        }
+    const baseCompletion = await openai.createCompletion({
+        model: 'text-davinci-003',
+        prompt: `Интересный факт.\n`,
+        temperature: 0.8,
+        max_tokens: 1000,
+    })
+
+    const basePromptOuput = baseCompletion.data.choices.pop()
+
+    if (!basePromptOuput.text) {
+        return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
     }
 
     switch (option) {
         case '1':
-            bot.sendMessage(chatId, 'Отправляю вам последние новости школы...')
-            handlerSendNews()
+            await bot.sendMessage(chatId, basePromptOuput.text)
             break
         case '2':
-            bot.sendMessage(chatId, 'Введите номер и букву вашего класса')
+            await bot.sendMessage(chatId, 'Введите номер и букву вашего класса')
             handlerSendSchedule()
             break
         default:
-            bot.sendMessage(chatId, 'Invalid option selected')
+           return bot.sendMessage(chatId, 'Invalid option selected')
     }
 })
 
