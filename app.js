@@ -1,7 +1,35 @@
 const TelegramBot = require('node-telegram-bot-api')
-const token = '6049310844:AAFXst432b0q3uB-yFxn1ZaGyvm8QJ2g0J4'
-const bot = new TelegramBot(token, {polling: true})
+const { config } = require("dotenv")
+const axios = require("axios")
+const { Configuration, OpenAIApi } = require("openai")
 
+config()
+
+const token = process.env.BOT_TOKEN
+const bot = new TelegramBot(token, {polling: true})
+const configuration = new Configuration({
+    apiKey: process.env.OPENAI_TOKEN
+})
+const openai = new OpenAIApi(configuration)
+
+bot.on('message', async (message) => {
+    const baseCompletion = await openai.createCompletion({
+        model: 'text-davinci-003',
+        prompt: `${message.text}.\n`,
+        temperature: 0.8,
+        max_tokens: 1000,
+    })
+
+    const chatId = message.chat.id
+
+    const basePromptOuput = baseCompletion.data.choices.pop()
+
+    if (!basePromptOuput?.text) {
+        return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
+    }
+
+    bot.sendMessage(chatId, basePromptOuput?.text)
+})
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id
     const options = {
@@ -17,6 +45,7 @@ bot.onText(/\/start/, (msg) => {
     }
     bot.sendMessage(chatId, `Добро пожаловать в школьный бот! Я здесь, чтобы помочь вам со всеми вашими школьными потребностями.`, options)
 })
+
 
 const schedule = {
     '5': {
@@ -88,11 +117,11 @@ bot.on('callback_query', (callbackQuery) => {
 
     switch (option) {
         case '1':
-            bot.sendMessage(chatId, 'Отправляю вам последние новости школы')
+            bot.sendMessage(chatId, 'Отправляю вам последние новости школы...')
             handlerSendNews()
             break
         case '2':
-            bot.sendMessage(chatId, 'Введите букву и номер вашего класса')
+            bot.sendMessage(chatId, 'Введите номер и букву вашего класса')
             handlerSendSchedule()
             break
         default:
