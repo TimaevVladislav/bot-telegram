@@ -1,5 +1,6 @@
 const { config } = require("dotenv")
-
+const express = require("express")
+const app = express()
 const { Configuration, OpenAIApi } = require("openai")
 const TelegramBot = require('node-telegram-bot-api')
 
@@ -126,7 +127,12 @@ bot.on('callback_query', async (callbackQuery) => {
     }
 })
 
-module.exports = bot
-module.exports = token
-module.exports = TelegramBot
-module.exports = config()
+app.set('port', (process.env.PORT || 3000))
+
+app.get('/', (req, res) => {
+    const result = 'Bot is running'
+    res.send(result)
+}).listen(app.get('port'), function() {
+    console.log('Bot is running, server is listening on port ', app.get('port'))
+})
+
