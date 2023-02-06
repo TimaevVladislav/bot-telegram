@@ -12,23 +12,27 @@ const openai = new OpenAIApi(configuration)
 
 const { schedule } = require("./data/components/schedule")
 bot.on('message', async (message) => {
-    if(message.text !== "/start") {
-        const baseCompletion = await openai.createCompletion({
-            model: 'text-davinci-003',
-            prompt: `${message.text}.\n`,
-            temperature: 0.8,
-            max_tokens: 1000,
-        })
+    try {
+        if(message.text !== "/start") {
+            const baseCompletion = await openai.createCompletion({
+                model: 'text-davinci-003',
+                prompt: `${message.text}.\n`,
+                temperature: 0.8,
+                max_tokens: 1000,
+            })
 
-        const chatId = message.chat.id
+            const chatId = message.chat.id
 
-        const basePromptOuput = baseCompletion.data.choices.pop()
+            const basePromptOuput = baseCompletion.data.choices.pop()
 
-        if (!basePromptOuput.text) {
-            return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
+            if (!basePromptOuput.text) {
+                return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
+            }
+
+            return bot.sendMessage(chatId, basePromptOuput.text)
         }
-
-        return bot.sendMessage(chatId, basePromptOuput.text)
+    } catch (e) {
+        console.log(e)
     }
 })
 
@@ -84,29 +88,33 @@ bot.on('callback_query', async (callbackQuery) => {
     const chatId = message.chat.id
     const option = callbackQuery.data
 
-    const baseCompletion = await openai.createCompletion({
-        model: 'text-davinci-003',
-        prompt: `Интересный факт.\n`,
-        temperature: 0.8,
-        max_tokens: 1000,
-    })
+    try{
+        const baseCompletion = await openai.createCompletion({
+            model: 'text-davinci-003',
+            prompt: `Интересный факт.\n`,
+            temperature: 0.8,
+            max_tokens: 1000,
+        })
 
-    const basePromptOuput = baseCompletion.data.choices.pop()
+        const basePromptOuput = baseCompletion.data.choices.pop()
 
-    if (!basePromptOuput.text) {
-        return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
-    }
+        if (!basePromptOuput.text) {
+            return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
+        }
 
-    switch (option) {
-        case '1':
-            await bot.sendMessage(chatId, basePromptOuput.text)
-            break
-        case '2':
-            await bot.sendMessage(chatId, 'Введите номер и букву вашего класса на английском')
-            handlerSendSchedule()
-            break
-        default:
-            return bot.sendMessage(chatId, 'Invalid option selected')
+        switch (option) {
+            case '1':
+                await bot.sendMessage(chatId, basePromptOuput.text)
+                break
+            case '2':
+                await bot.sendMessage(chatId, 'Введите номер и букву вашего класса на английском')
+                handlerSendSchedule()
+                break
+            default:
+                return bot.sendMessage(chatId, 'Invalid option selected')
+        }
+    } catch (e) {
+        console.log(e)
     }
 })
 
