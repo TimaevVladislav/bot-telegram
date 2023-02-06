@@ -10,39 +10,7 @@ const bot = new TelegramBot(token, { polling: true })
 const configuration = new Configuration({ apiKey: process.env.OPENAI_TOKEN })
 const openai = new OpenAIApi(configuration)
 
-
-const schedule = {
-    '5': {
-        'A': ['Математика', 'История', 'Английский язык'],
-        'B': ['Наука', 'География', 'Искусство']
-    },
-    '6': {
-        'A': ['Биология', 'Химия', 'Физика'],
-        'B': ['Литература', 'Музыка', 'Физическая культура']
-    },
-    '7': {
-        'A': ['Математика', 'История', 'Английский язык'],
-        'B': ['Наука', 'География', 'Искусство']
-    },
-    '8': {
-        'A': ['Биология', 'Химия', 'Физика'],
-        'B': ['Литература', 'Музыка', 'Физическая культура']
-    },
-    '9': {
-        'A': ['Математика', 'История', 'Английский язык'],
-        'B': ['Наука', 'География', 'Искусство']
-    },
-    '10': {
-        'A': ['Биология', 'Химия', 'Физика'],
-        'B': ['Литература', 'Музыка', 'Физическая культура']
-    },
-    '11': {
-        'A': ['Математика', 'История', 'Английский язык'],
-        'B': ['Наука', 'География', 'Искусство']
-    }
-}
-
-
+const { schedule } = require("./data/components/schedule")
 bot.on('message', async (message) => {
     if(message.text !== "/start") {
         const baseCompletion = await openai.createCompletion({
@@ -63,6 +31,7 @@ bot.on('message', async (message) => {
         return bot.sendMessage(chatId, basePromptOuput.text)
     }
 })
+
 
 bot.onText(/\/start/, async (message) => {
     const chatId = message.chat.id
@@ -88,23 +57,23 @@ bot.on('callback_query', (callbackQuery) => {
 
     if (action) {
         // Отловить нажатие на кнопку
-        return bot.sendMessage(chatId, "Пожалуйста, ожидайте, Я отправляю вам данные...")
+        bot.sendMessage(chatId, "Пожалуйста, ожидайте, Я отправляю вам данные...")
     }
 })
 
 const handlerSendSchedule = () => {
     bot.on('message', (message) => {
-       if(message.text !== "/start") {
-           const chatId = message.chat.id
-           const classLetter = message.text[0]
-           const classNumber = message.text[1].toUpperCase()
+        const chatId = message.chat.id
+        const classLetter = message.text[0]
+        const classNumber = message.text[1].toUpperCase()
 
+       if(message.text !== "/start") {
            if (schedule[classLetter] && schedule[classLetter][classNumber]) {
                const subjects = schedule[classLetter][classNumber]
                const scheduleMessage = `Расписание ${classLetter}${classNumber} класса: \n\n` + subjects.join('\n')
                bot.sendMessage(chatId, scheduleMessage)
            } else {
-               return bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
+               bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
            }
        }
     })
@@ -133,7 +102,7 @@ bot.on('callback_query', async (callbackQuery) => {
             await bot.sendMessage(chatId, basePromptOuput.text)
             break
         case '2':
-            bot.sendMessage(chatId, 'Введите номер и букву вашего класса на английском')
+            await bot.sendMessage(chatId, 'Введите номер и букву вашего класса на английском')
             handlerSendSchedule()
             break
         default:
