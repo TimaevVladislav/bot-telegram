@@ -38,20 +38,24 @@ bot.on('message', async (message) => {
 
 
 bot.onText(/\/start/, async (message) => {
-    const chatId = message.chat.id
+   try {
+       const chatId = message.chat.id
 
-    const options = {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    {text: 'Интересный факт', callback_data: '1'},
-                    {text: 'Расписание уроков', callback_data: '2'}
-                ]
+       const options = {
+           reply_markup: {
+               inline_keyboard: [
+                   [
+                       {text: 'Интересный факт', callback_data: '1'},
+                       {text: 'Расписание уроков', callback_data: '2'}
+                   ]
 
-            ]
-        }
-    }
-    return bot.sendMessage(chatId, `Добро пожаловать в школьный бот! Я здесь, чтобы помочь вам со всеми вашими школьными потребностями.`, options)
+               ]
+           }
+       }
+       return bot.sendMessage(chatId, `Добро пожаловать в школьный бот! Я здесь, чтобы помочь вам со всеми вашими школьными потребностями.`, options)
+   } catch (e) {
+       console.log(e)
+   }
 })
 
 bot.on('callback_query', (callbackQuery) => {
@@ -66,29 +70,33 @@ bot.on('callback_query', (callbackQuery) => {
 })
 
 const handlerSendSchedule = () => {
-    bot.on('message', (message) => {
-        const chatId = message.chat.id
-        const classLetter = message.text[0]
-        const classNumber = message.text[1].toUpperCase()
+    try {
+        bot.on('message', (message) => {
+            const chatId = message.chat.id
+            const classLetter = message.text[0]
+            const classNumber = message.text[1].toUpperCase()
 
-       if(message.text !== "/start") {
-           if (schedule[classLetter] && schedule[classLetter][classNumber]) {
-               const subjects = schedule[classLetter][classNumber]
-               const scheduleMessage = `Расписание ${classLetter}${classNumber} класса: \n\n` + subjects.join('\n')
-               bot.sendMessage(chatId, scheduleMessage)
-           } else {
-               bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
-           }
-       }
-    })
+            if(message.text !== "/start") {
+                if (schedule[classLetter] && schedule[classLetter][classNumber]) {
+                    const subjects = schedule[classLetter][classNumber]
+                    const scheduleMessage = `Расписание ${classLetter}${classNumber} класса: \n\n` + subjects.join('\n')
+                    bot.sendMessage(chatId, scheduleMessage)
+                } else {
+                    bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
+                }
+            }
+        })
+    } catch (e) {
+        console.log(e)
+    }
 }
 
 bot.on('callback_query', async (callbackQuery) => {
-    const message = callbackQuery.message
-    const chatId = message.chat.id
-    const option = callbackQuery.data
+    try {
+        const message = callbackQuery.message
+        const chatId = message.chat.id
+        const option = callbackQuery.data
 
-    try{
         const baseCompletion = await openai.createCompletion({
             model: 'text-davinci-003',
             prompt: `Интересный факт.\n`,
