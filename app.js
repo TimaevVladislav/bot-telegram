@@ -12,7 +12,9 @@ const configuration = new Configuration({ apiKey: process.env.OPENAI_TOKEN })
 const openai = new OpenAIApi(configuration)
 
 const { schedule } = require("./data/components/schedule")
-bot.on('message', async (message) => {
+bot.on('callback_query', async (callbackQuery) => {
+    const message = callbackQuery.message
+
     try {
         if(message.text !== "/start") {
             const baseCompletion = await openai.createCompletion({
@@ -23,7 +25,6 @@ bot.on('message', async (message) => {
             })
 
             const chatId = message.chat.id
-
             const basePromptOuput = baseCompletion.data.choices.pop()
 
             if (!basePromptOuput.text) {
@@ -36,7 +37,6 @@ bot.on('message', async (message) => {
         console.log(e)
     }
 })
-
 
 bot.onText(/\/start/, async (message) => {
    try {
@@ -70,33 +70,12 @@ bot.on('callback_query', (callbackQuery) => {
     }
 })
 
-const handlerSendSchedule = () => {
-    try {
-        bot.on('message', (message) => {
-            const chatId = message.chat.id
-            const classLetter = message.text[0]
-            const classNumber = message.text[1].toUpperCase()
-
-            if(message.text !== "/start") {
-                if (schedule[classLetter] && schedule[classLetter][classNumber]) {
-                    const subjects = schedule[classLetter][classNumber]
-                    const scheduleMessage = `Расписание ${classLetter}${classNumber} класса: \n\n` + subjects.join('\n')
-                    bot.sendMessage(chatId, scheduleMessage)
-                } else {
-                    bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
-                }
-            }
-        })
-    } catch (e) {
-        console.log(e)
-    }
-}
-
 bot.on('callback_query', async (callbackQuery) => {
     try {
         const message = callbackQuery.message
         const chatId = message.chat.id
         const option = callbackQuery.data
+
 
         const baseCompletion = await openai.createCompletion({
             model: 'text-davinci-003',
@@ -108,20 +87,32 @@ bot.on('callback_query', async (callbackQuery) => {
         const basePromptOuput = baseCompletion.data.choices.pop()
 
         if (!basePromptOuput.text) {
-            return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
+            bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
         }
 
-        switch (option) {
-            case '1':
-                await bot.sendMessage(chatId, basePromptOuput.text)
-                break
-            case '2':
-                await bot.sendMessage(chatId, 'Введите номер и букву вашего класса на английском')
-                handlerSendSchedule()
-                break
-            default:
-                return bot.sendMessage(chatId, 'Invalid option selected')
+        if(option === "2") {
+            bot.sendMessage(chatId, "Введите номер и букву вашего класса на английском")
+
+            bot.on('message', (message) => {
+                const chatId = message.chat.id
+                const classLetter = message.text[0]
+                const classNumber = message.text[1].toUpperCase()
+
+                if(message.text !== "/start") {
+                    if (schedule[classLetter] && schedule[classLetter][classNumber]) {
+                        const subjects = schedule[classLetter][classNumber]
+                        const scheduleMessage = `Расписание ${classLetter}${classNumber} класса: \n\n` + subjects.join('\n')
+                        bot.sendMessage(chatId, scheduleMessage)
+                    } else {
+                        bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
+                        bot.clearReplyListeners()
+                    }
+                }
+            })
+        } else {
+            await bot.sendMessage(chatId, basePromptOuput.text)
         }
+
     } catch (e) {
         console.log(e)
     }
@@ -129,10 +120,6 @@ bot.on('callback_query', async (callbackQuery) => {
 
 app.set('port', (process.env.PORT || 3000))
 
-app.get('/', (req, res) => {
-    const result = 'Bot is running'
-    res.send(result)
-}).listen(app.get('port'), function() {
-    console.log('Bot is running, server is listening on port ', app.get('port'))
-})
+app.listen(app.get("port"), () => { console.log("Bot is running, server is listening on port", process.env.PORT) })
+
 
