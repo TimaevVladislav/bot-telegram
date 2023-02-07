@@ -1,8 +1,8 @@
 const { config } = require("dotenv")
 const express = require("express")
-const app = express()
 const { Configuration, OpenAIApi } = require("openai")
 const TelegramBot = require('node-telegram-bot-api')
+const app = express()
 
 config()
 
@@ -12,29 +12,35 @@ const configuration = new Configuration({ apiKey: process.env.OPENAI_TOKEN })
 const openai = new OpenAIApi(configuration)
 
 const { schedule } = require("./data/components/schedule")
+
 bot.on('callback_query', async (callbackQuery) => {
+    const action = callbackQuery.data
     const message = callbackQuery.message
 
-    try {
-        if(message.text !== "/start") {
-            const baseCompletion = await openai.createCompletion({
-                model: 'text-davinci-003',
-                prompt: `${message.text}.\n`,
-                temperature: 0.8,
-                max_tokens: 1000,
-            })
+    if(action !== "2") {
+        bot.on('message', async () => {
+            try {
+                if(message.text !== "/start") {
+                    const baseCompletion = await openai.createCompletion({
+                        model: 'text-davinci-003',
+                        prompt: `${message.text}.\n`,
+                        temperature: 0.8,
+                        max_tokens: 1000,
+                    })
 
-            const chatId = message.chat.id
-            const basePromptOuput = baseCompletion.data.choices.pop()
+                    const chatId = message.chat.id
+                    const basePromptOuput = baseCompletion.data.choices.pop()
 
-            if (!basePromptOuput.text) {
-                return bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
+                    if (!basePromptOuput.text) {
+                        return bot.sendMessage(chatId, 'Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...')
+                    }
+
+                    return bot.sendMessage(chatId, basePromptOuput.text)
+                }
+            } catch (e) {
+                console.log(e)
             }
-
-            return bot.sendMessage(chatId, basePromptOuput.text)
-        }
-    } catch (e) {
-        console.log(e)
+        })
     }
 })
 
@@ -47,7 +53,7 @@ bot.onText(/\/start/, async (message) => {
                inline_keyboard: [
                    [
                        {text: 'Интересный факт', callback_data: '1'},
-                       {text: 'Расписание уроков', callback_data: '2'}
+                       {text: 'Расписание уроков', callback_data: '2'},
                    ]
 
                ]
@@ -59,6 +65,7 @@ bot.onText(/\/start/, async (message) => {
    }
 })
 
+
 bot.on('callback_query', (callbackQuery) => {
     const action = callbackQuery.data
     const message = callbackQuery.message
@@ -66,7 +73,7 @@ bot.on('callback_query', (callbackQuery) => {
 
     if (action) {
         // Отловить нажатие на кнопку
-        bot.sendMessage(chatId, "Пожалуйста, ожидайте, Я отправляю вам данные...")
+        bot.sendMessage(chatId, 'Пожалуйста, ожидайте, Я отправляю вам данные...')
     }
 })
 
@@ -75,7 +82,6 @@ bot.on('callback_query', async (callbackQuery) => {
         const message = callbackQuery.message
         const chatId = message.chat.id
         const option = callbackQuery.data
-
 
         const baseCompletion = await openai.createCompletion({
             model: 'text-davinci-003',
@@ -87,25 +93,26 @@ bot.on('callback_query', async (callbackQuery) => {
         const basePromptOuput = baseCompletion.data.choices.pop()
 
         if (!basePromptOuput.text) {
-            bot.sendMessage(chatId, "Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...")
+            bot.sendMessage(chatId, 'Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...')
         }
 
         if(option === "2") {
-            bot.sendMessage(chatId, "Введите номер и букву вашего класса на английском")
+            bot.sendMessage(chatId, 'Введите номер и букву вашего класса на английском')
 
             bot.on('message', (message) => {
                 const chatId = message.chat.id
                 const classLetter = message.text[0]
                 const classNumber = message.text[1].toUpperCase()
 
+
                 if(message.text !== "/start") {
                     if (schedule[classLetter] && schedule[classLetter][classNumber]) {
                         const subjects = schedule[classLetter][classNumber]
                         const scheduleMessage = `Расписание ${classLetter}${classNumber} класса: \n\n` + subjects.join('\n')
                         bot.sendMessage(chatId, scheduleMessage)
+
                     } else {
                         bot.sendMessage(chatId, 'Класс не найден. Пожалуйста, введите действительную букву класса и номер.')
-                        bot.clearReplyListeners()
                     }
                 }
             })
@@ -119,7 +126,6 @@ bot.on('callback_query', async (callbackQuery) => {
 })
 
 app.set('port', (process.env.PORT || 3000))
-
-app.listen(app.get("port"), () => { console.log("Bot is running, server is listening on port", process.env.PORT) })
+app.listen(app.get('port'), () => { console.log('Bot is running, server is listening on port', process.env.PORT) })
 
 
