@@ -53,7 +53,7 @@ bot.onText(/\/start/, async (message) => {
                inline_keyboard: [
                    [
                        {text: 'Интересный факт', callback_data: '1'},
-                       {text: 'Расписание уроков', callback_data: '2'},
+                       // {text: 'Расписание уроков', callback_data: '2'},
                    ]
 
                ]
