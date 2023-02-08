@@ -13,37 +13,29 @@ const openai = new OpenAIApi(configuration)
 
 const { schedule } = require("./data/components/schedule")
 
-bot.on('callback_query', async (callbackQuery) => {
-    const action = callbackQuery.data
-    const message = callbackQuery.message
+bot.on('message', async (message) => {
+    try {
+        if(message.text !== "/start") {
+            const baseCompletion = await openai.createCompletion({
+                model: 'text-davinci-003',
+                prompt: `${message.text}.\n`,
+                temperature: 0.8,
+                max_tokens: 1000,
+            })
 
-    if(action !== "2") {
-        bot.on('message', async () => {
-            try {
-                if(message.text !== "/start") {
-                    const baseCompletion = await openai.createCompletion({
-                        model: 'text-davinci-003',
-                        prompt: `${message.text}.\n`,
-                        temperature: 0.8,
-                        max_tokens: 1000,
-                    })
+            const chatId = message.chat.id
+            const basePromptOuput = baseCompletion.data.choices.pop()
 
-                    const chatId = message.chat.id
-                    const basePromptOuput = baseCompletion.data.choices.pop()
-
-                    if (!basePromptOuput.text) {
-                        return bot.sendMessage(chatId, 'Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...')
-                    }
-
-                    return bot.sendMessage(chatId, basePromptOuput.text)
-                }
-            } catch (e) {
-                console.log(e)
+            if (!basePromptOuput.text) {
+                return bot.sendMessage(chatId, 'Пожалуйста, попробуйте ещё раз, Бот не смог отправить данные...')
             }
-        })
+
+            return bot.sendMessage(chatId, basePromptOuput.text)
+        }
+    } catch (e) {
+        console.log(e)
     }
 })
-
 bot.onText(/\/start/, async (message) => {
    try {
        const chatId = message.chat.id
